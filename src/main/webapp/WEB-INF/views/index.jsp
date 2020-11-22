@@ -1,13 +1,5 @@
 <!DOCTYPE html>
-<%@ page import="java.io.IOException"%>
-<%@ page import="java.text.SimpleDateFormat"%>
-<%@ page import="java.util.Date"%>
-<%@ page import="java.util.SimpleTimeZone"%>
-<%@ page import="javax.servlet.annotation.WebServlet"%>
-<%@ page import="javax.servlet.http.HttpServlet"%>
-<%@ page import="javax.servlet.http.HttpServletRequest"%>
-<%@ page import="javax.servlet.http.HttpServletResponse"%>
-<%@ page import="java.util.TimeZone"%>
+
 
 <html>
 <head>
