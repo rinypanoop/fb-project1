@@ -83,7 +83,8 @@ html, body {
 			  type: "get", //send it through get method
 			  data: { 
 			    fromDate: document.getElementById("datepicker-1").value, 
-			    toDate: document.getElementById("datepicker-2").value
+			    toDate: document.getElementById("datepicker-2").value,
+			    access_token:  document.getElementById("access_token").value
 			  },
 			  success: function(response) {
 			    console.log(response);
@@ -153,9 +154,9 @@ html, body {
 
 
 	<form id="form_home" action="/home" method="post">
-	 <input type="hidden" name="access_token" id="access_token" src="<%=request.getAttribute("access_token")%>">
-	 <input type="hidden" name="user_name"  id="user_name"  src="<%=request.getAttribute("user_name")%>"> 
-	  <input type="hidden" name="user_id"  id="user_id" src="<%=request.getAttribute("user_id")%>">
+	 <input type="hidden" name="access_token" id="access_token" value="<%=request.getAttribute("access_token")%>">
+	 <input type="hidden" name="user_name"  id="user_name"  value="<%=request.getAttribute("user_name")%>"> 
+	  <input type="hidden" name="user_id"  id="user_id" value="<%=request.getAttribute("user_id")%>">
 	</form>
 
 
