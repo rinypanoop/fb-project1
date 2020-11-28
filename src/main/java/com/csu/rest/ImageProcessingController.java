@@ -4,13 +4,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -28,7 +32,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.csu.rest.model.Datum_;
 import com.csu.rest.model.FbAlbums;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.appengine.api.datastore.DatastoreService;
+import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
+import com.google.appengine.api.datastore.FetchOptions;
+import com.google.appengine.api.datastore.PreparedQuery;
+import com.google.appengine.api.datastore.Query;
+import com.google.appengine.api.datastore.Query.FilterOperator;
+import com.google.appengine.api.datastore.Query.FilterPredicate;
 import com.google.cloud.vision.v1.AnnotateImageRequest;
 import com.google.cloud.vision.v1.AnnotateImageResponse;
 import com.google.cloud.vision.v1.BatchAnnotateImagesResponse;
@@ -60,44 +71,114 @@ public class ImageProcessingController {
 	}
 
 	@GetMapping(value = "/images")
-	public String getAllEmployees(Model model, @RequestParam String fromDate, @RequestParam String toDate, @RequestParam String access_token){
+	public String getAllEmployees(Model model, @RequestParam String fromDate, @RequestParam String toDate, @RequestParam String access_token, String user_id){
 
-		System.out.println(fromDate);
-		System.out.println(toDate);
+		//Get Images from FB, run vision and store in data store.
+		DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
+		getImagesFromFbAndStoreinDataStore(access_token, datastore, user_id);
 
-		Images images = new Images();
-		model.addAttribute("images", images);
 
+		//Get data for a given date from data store and send response.
+		ImageDataResponse imageDataResponse =  getImagesFromStore(datastore,fromDate, toDate);
+		model.addAttribute("imageDataResponse", imageDataResponse);
+
+		return "jsonview";
+	}
+
+	private void getImagesFromFbAndStoreinDataStore(String access_token, DatastoreService datastore, String user_id) {
 		try {
-			FbAlbums albums = getPhotosFromFb(access_token,1);
+			int limit = 1; //TODO increase the limit 
+			String baseUrl = "https://graph.facebook.com/v9.0/me/albums";
+			String parameters = "?fields=photos%7Bcreated_time%2Cid%2Cpicture%7D%2Cname&limit="+limit+"&access_token=";
 
-			System.out.println(albums.getData().get(0).getId());
+			String url = baseUrl + parameters + access_token;
 
-			if(null != albums && !albums.getData().isEmpty()) {
-				albums.getData().forEach(album -> {
-					if(null !=  album.getPhotos() && null != album.getPhotos().getData() && !album.getPhotos().getData().isEmpty()) {
-						album.getPhotos().getData().forEach( photo -> {
+			// This is to work with FB paging
+			while(StringUtils.isNotBlank(url)) {
 
-							//TODO add code to check in google data store, if it is already processed. 
-							//photo.getId();
+				FbAlbums albums = getPhotosFromFb(url);
+				if(null != albums && !albums.getData().isEmpty()) {
+					albums.getData().forEach(album -> {
+						if(null !=  album.getPhotos() && null != album.getPhotos().getData() && !album.getPhotos().getData().isEmpty()) {
+							album.getPhotos().getData().forEach( photo -> {
 
-							List<EntityAnnotation> imageLabels = getImageLabels(photo.getPicture());
+								//TODO Check if the image is already present in the data store and process google vision if not present.
 
-							if(null != imageLabels) {
-								saveToDataStore(imageLabels,photo);
-							}
-						});
-					}
-				});
+								Entity user = checkIfPresent(datastore, photo.getId());
+								if(null == user) {
+									//Process and fetch image lables using google vision analytics.
+									List<EntityAnnotation> imageLabels = getImageLabels(photo.getPicture());
+
+									//Save the imageId, image URL and lables to data store
+									if(null != imageLabels) {
+										user = saveToDataStore(imageLabels, photo, datastore, user_id);
+									}
+								}
+
+							});
+						}
+					});
+					url =  null != albums.getPaging() ? albums.getPaging().getNext() : null;	
+				}else {
+					url = null;
+				}
+
 			}
-
 
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
 
 
-		return "jsonview";
+	//Query data store to check if the image is already present.
+	private Entity checkIfPresent(DatastoreService datastore, String fbPhotoId) {
+		Query q =
+				new Query("User")
+				.setFilter(new FilterPredicate("fb_image_id", FilterOperator.EQUAL, fbPhotoId));
+		PreparedQuery pq = datastore.prepare(q);
+		Entity result = pq.asSingleEntity();
+		return result;
+	}
+
+
+	//Query data store to check if the image is already present.
+	private ImageDataResponse getImagesFromStore(DatastoreService datastore, String fromDate, String toDate ) {
+		List<String> imageList = new ArrayList<String>();
+		imageList.add("Flower");
+
+		Query query =
+				new Query("User");
+
+		query.setFilter(new FilterPredicate("fb_post_date", FilterOperator.GREATER_THAN_OR_EQUAL , fromDate));
+		query.setFilter(new FilterPredicate("fb_post_date", FilterOperator.LESS_THAN_OR_EQUAL , toDate));
+		
+		
+
+		PreparedQuery pq = datastore.prepare(query);
+		List<Entity> results = pq.asList(FetchOptions.Builder.withDefaults());
+		
+		Set<String> lables = new TreeSet<>();
+		List<com.csu.rest.Image> images = new ArrayList<>();
+		
+		if(null != results) {
+			results.forEach(user -> {
+				List<String> lablesFromStore = (List<String>) user.getProperty("lables");
+				lables.addAll(lablesFromStore);
+				com.csu.rest.Image image = new com.csu.rest.Image();
+				image.setUrl(user.getProperty("image_url").toString());
+				image.setLabels(lablesFromStore);
+				images.add(image);
+			});
+		}
+		
+		
+		ImageDataResponse imageDataResponse = new ImageDataResponse();
+		
+		
+		
+		
+		return imageDataResponse;
 	}
 
 
@@ -109,18 +190,20 @@ public class ImageProcessingController {
 	}
 
 
-	private void saveToDataStore(List<EntityAnnotation> imageLabels, Datum_ photo) {
+	//Saving to data store.
+	private Entity saveToDataStore(List<EntityAnnotation> imageLabels, Datum_ photo, DatastoreService datastore, String user_id) {
 		Entity user = new Entity("User");
 		user.setProperty("fb_post_date", photo.getCreatedTime());
+		user.setProperty("user_id", user_id);
 		user.setProperty("fb_image_id", photo.getId());
 		user.setProperty("image_url", photo.getPicture());
-
+		user.setProperty("created_on", new Date());
 		List<String> lables = imageLabels.stream().filter(label -> label.getScore() * 100 > 95)
 				.map(EntityAnnotation::getDescription).collect(Collectors.toList());
 		user.setProperty("lables", lables);
+		datastore.put(user);
+		return user;
 	}
-
-
 
 	private List<EntityAnnotation> getImageLabels(String imageUrl) {
 		try {
@@ -152,27 +235,22 @@ public class ImageProcessingController {
 		return null;
 	}
 
-	private FbAlbums getPhotosFromFb(String access_token, int limit ) throws IOException {
+	private FbAlbums getPhotosFromFb(String url) throws IOException {
 		CloseableHttpClient httpClient = HttpClients.createDefault();
 		FbAlbums fbAlbum = null;
 		try {
-			String baseUrl = "https://graph.facebook.com/v9.0/me/albums";
-			String parameters = "?fields=photos%7Bcreated_time%2Cid%2Cpicture%7D%2Cname&limit="+limit+"&access_token=";
-			HttpGet request = new HttpGet(baseUrl + parameters + access_token);
+
+			HttpGet request = new HttpGet(url);
+
 			CloseableHttpResponse response = httpClient.execute(request);
 			try {
-				// Get HttpResponse Status
-				System.out.println(response.getProtocolVersion());              // HTTP/1.1
 				System.out.println(response.getStatusLine().getStatusCode());   // 200
-				System.out.println(response.getStatusLine().getReasonPhrase()); // OK
-				System.out.println(response.getStatusLine().toString());        // HTTP/1.1 200 OK
-
 				HttpEntity entity = response.getEntity();
 				if (entity != null) {
 					String result = EntityUtils.toString(entity);
 					System.out.println(result);
 					ObjectMapper mapper = new ObjectMapper();
-					fbAlbum = mapper.readValue(result, FbAlbums.class);
+					fbAlbum = mapper.readValue(result, FbAlbums.class);	
 				}
 
 			} finally {

@@ -84,15 +84,31 @@ html, body {
 			  data: { 
 			    fromDate: document.getElementById("datepicker-1").value, 
 			    toDate: document.getElementById("datepicker-2").value,
-			    access_token:  document.getElementById("access_token").value
+			    access_token:  document.getElementById("access_token").value,
+			    user_id:  document.getElementById("user_id").value
 			  },
 			  success: function(response) {
 			    console.log(response);
+			    drawImages(response);
 			  },
 			  error: function(xhr) {
 			    //Do Something to handle error
 			  }
 			});
+	}
+	
+	function drawImages(response){
+		
+		var html = "";
+		response.imageDataResponse.images.forEach(obj => {
+	        
+	        console.log(obj);
+	        
+	      html = html + '<img src="'+obj+'" height = "200px" width ="300px;"> </img><br>';
+	        
+	        
+	    });
+		document.getElementById("div_content").innerHTML=html;
 	}
 	
 </script>
