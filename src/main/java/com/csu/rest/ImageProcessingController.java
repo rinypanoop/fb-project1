@@ -3,9 +3,13 @@ package com.csu.rest;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -38,6 +42,8 @@ import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.FetchOptions;
 import com.google.appengine.api.datastore.PreparedQuery;
 import com.google.appengine.api.datastore.Query;
+import com.google.appengine.api.datastore.Query.CompositeFilterOperator;
+import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.Query.FilterOperator;
 import com.google.appengine.api.datastore.Query.FilterPredicate;
 import com.google.cloud.vision.v1.AnnotateImageRequest;
@@ -79,7 +85,7 @@ public class ImageProcessingController {
 
 
 		//Get data for a given date from data store and send response.
-		ImageDataResponse imageDataResponse =  getImagesFromStore(datastore,fromDate, toDate);
+		ImageDataResponse imageDataResponse =  getImagesFromStore(datastore,fromDate, toDate, user_id);
 		model.addAttribute("imageDataResponse", imageDataResponse);
 
 		return "jsonview";
@@ -94,8 +100,9 @@ public class ImageProcessingController {
 			String url = baseUrl + parameters + access_token;
 
 			// This is to work with FB paging
-			while(StringUtils.isNotBlank(url)) {
-
+			int count = 0;
+			while(StringUtils.isNotBlank(url) && count <= 3) {
+				count++;
 				FbAlbums albums = getPhotosFromFb(url);
 				if(null != albums && !albums.getData().isEmpty()) {
 					albums.getData().forEach(album -> {
@@ -143,24 +150,40 @@ public class ImageProcessingController {
 
 
 	//Query data store to check if the image is already present.
-	private ImageDataResponse getImagesFromStore(DatastoreService datastore, String fromDate, String toDate ) {
+	private ImageDataResponse getImagesFromStore(DatastoreService datastore, String fromDate, String toDate, String user_id ) {
 		List<String> imageList = new ArrayList<String>();
 		imageList.add("Flower");
 
 		Query query =
 				new Query("User");
 
-		query.setFilter(new FilterPredicate("fb_post_date", FilterOperator.GREATER_THAN_OR_EQUAL , fromDate));
-		query.setFilter(new FilterPredicate("fb_post_date", FilterOperator.LESS_THAN_OR_EQUAL , toDate));
-		
-		
+		DateFormat originalFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.ENGLISH);
+		try {
+			Date search_from_date = originalFormat.parse(fromDate);
+			Date search_to_date = originalFormat.parse(toDate);
+
+			Filter fromFilter = new FilterPredicate("fb_post_date", FilterOperator.GREATER_THAN_OR_EQUAL, search_from_date);
+
+			Filter toFIlter = new FilterPredicate("fb_post_date", FilterOperator.LESS_THAN_OR_EQUAL, search_to_date);
+			
+			Filter userFilter = new FilterPredicate("user_id", FilterOperator.EQUAL, user_id);
+
+			Filter dateFilter = CompositeFilterOperator.and(fromFilter, toFIlter, userFilter);
+
+			query.setFilter(dateFilter);
+
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+
+
 
 		PreparedQuery pq = datastore.prepare(query);
 		List<Entity> results = pq.asList(FetchOptions.Builder.withDefaults());
-		
+
 		Set<String> lables = new TreeSet<>();
 		List<com.csu.rest.Image> images = new ArrayList<>();
-		
+
 		if(null != results) {
 			results.forEach(user -> {
 				List<String> lablesFromStore = (List<String>) user.getProperty("lables");
@@ -171,13 +194,14 @@ public class ImageProcessingController {
 				images.add(image);
 			});
 		}
-		
-		
+
+
 		ImageDataResponse imageDataResponse = new ImageDataResponse();
-		
-		
-		
-		
+
+		imageDataResponse.setImages(images);
+		imageDataResponse.setLables(lables);
+
+
 		return imageDataResponse;
 	}
 
@@ -192,17 +216,36 @@ public class ImageProcessingController {
 
 	//Saving to data store.
 	private Entity saveToDataStore(List<EntityAnnotation> imageLabels, Datum_ photo, DatastoreService datastore, String user_id) {
-		Entity user = new Entity("User");
-		user.setProperty("fb_post_date", photo.getCreatedTime());
-		user.setProperty("user_id", user_id);
-		user.setProperty("fb_image_id", photo.getId());
-		user.setProperty("image_url", photo.getPicture());
-		user.setProperty("created_on", new Date());
+
 		List<String> lables = imageLabels.stream().filter(label -> label.getScore() * 100 > 95)
 				.map(EntityAnnotation::getDescription).collect(Collectors.toList());
-		user.setProperty("lables", lables);
-		datastore.put(user);
-		return user;
+
+		if(null != lables && !lables.isEmpty()) {
+
+			Entity user = new Entity("User");
+
+
+			DateFormat originalFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH);
+			Date fb_date = null;
+			try {
+				fb_date = originalFormat.parse(photo.getCreatedTime());
+			} catch (ParseException e) {
+				e.printStackTrace();
+			}
+
+			user.setProperty("fb_post_date", fb_date);
+			user.setProperty("user_id", user_id);
+			user.setProperty("fb_image_id", photo.getId());
+			user.setProperty("image_url", photo.getPicture());
+			user.setProperty("created_on", new Date());
+			user.setProperty("lables", lables);
+
+			datastore.put(user);
+
+			return user;
+
+		}
+		return null;
 	}
 
 	private List<EntityAnnotation> getImageLabels(String imageUrl) {

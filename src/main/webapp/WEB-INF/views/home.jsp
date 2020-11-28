@@ -104,7 +104,7 @@ html, body {
 	        
 	        console.log(obj);
 	        
-	      html = html + '<img src="'+obj+'" height = "200px" width ="300px;"> </img><br>';
+	      html = html + '<img src="'+obj.url+'" height = "200px" width ="300px;"> </img><br>';
 	        
 	        
 	    });
