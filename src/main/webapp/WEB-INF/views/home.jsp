@@ -97,19 +97,92 @@ html, body {
 			});
 	}
 	
+	
+	var currentLabelDisplay;
+	var currentLabelA;
 	function drawImages(response){
+		var content_div = document.getElementById("div_content");
+		var sidebar_div = document.getElementById("div_sidebar");
 		
-		var html = "";
+		var isFirst=true;
+		response.imageDataResponse.lables.forEach(label => {
+		
+		var label_div = document.createElement("div");
+		label_div.setAttribute("id",label);
+		
+		var label_a = document.createElement("a");
+		label_a.setAttribute("href","#"+label);
+		label_a.setAttribute("id","a_"+label);	
+		label_a.text=label;
+		label_a.addEventListener("click", function(event) {
+			var current_display_id = event.target.text;
+			document.getElementById(current_display_id).style.display="block";
+			currentLabelDisplay.style.display="none";
+			currentLabelDisplay = document.getElementById(current_display_id);
+			
+			event.target.style.backgroundColor= "#4CAF50";
+			event.target.style.color= "white";
+			
+			currentLabelA.style.backgroundColor= "#f1f1f1";
+			currentLabelA.style.color= "black";
+			
+			currentLabelA = document.getElementById("a_"+current_display_id);
+			
+			});
+		
+		if(isFirst){
+			label_div.style.display = "block";
+			currentLabelDisplay=label_div;
+			label_a.setAttribute("class","active");
+			currentLabelA= label_a;
+		}else{
+			label_div.style.display = "none";
+		}
+		
+		 content_div.appendChild(label_div);
+		 sidebar_div.appendChild(label_a);
+		 isFirst=false;
+		 
+		});
+		 
+
 		response.imageDataResponse.images.forEach(obj => {
 	        
-	        console.log(obj);
-	        
-	      html = html + '<img src="'+obj.url+'" height = "200px" width ="300px;"> </img><br>';
-	        
-	        
+	      console.log(obj);
+	      obj.labels.forEach(label => {
+	    	  var label_div = document.getElementById(label);
+	    	  label_div.appendChild(createImageElement(obj.url));
+	    	  label_div.appendChild(document.createElement("br"));
+	      })
+	       
 	    });
-		document.getElementById("div_content").innerHTML=html;
+		
 	}
+	
+	function changeDisplay(){
+		alert(1)
+	}
+	
+	function createImageElement(image_url){
+		var img = document.createElement("img");
+		img.setAttribute("src", image_url);
+		return img;
+	}
+	
+	function test(){
+		
+		var para = document.createElement("p");
+		var node = document.createTextNode("Tutorix is the best e-learning platform");
+		para.appendChild(node);
+		
+		
+		img.setAttribute("src", "https://scontent-sjc3-1.xx.fbcdn.net/v/t1.0-0/p130x130/127153288_129374702305580_3499307895933272858_n.jpg?_nc_cat=111&ccb=2&_nc_sid=0be424&_nc_ohc=_L80X1TVZacAX_j3qpD&_nc_ht=scontent-sjc3-1.xx&tp=6&oh=302ff57bd73d0a956b556f2e2095f118&oe=5FE59217");
+		
+		//https://scontent-sjc3-1.xx.fbcdn.net/v/t1.0-0/p130x130/127153288_129374702305580_3499307895933272858_n.jpg?_nc_cat=111&ccb=2&_nc_sid=0be424&_nc_ohc=_L80X1TVZacAX_j3qpD&_nc_ht=scontent-sjc3-1.xx&tp=6&oh=302ff57bd73d0a956b556f2e2095f118&oe=5FE59217
+		
+		  document.getElementById("div_content").appendChild(img);
+	}
+	
 	
 </script>
 
@@ -137,6 +210,7 @@ html, body {
 											</p>
 										</td>
 										<td><input type="button" value="search" id="search" onclick="getImages()">
+										<input type="button" value="test" id="search" onclick="test()">
 										</td>
 									</tr>
 								</table>
@@ -151,15 +225,11 @@ html, body {
 		<tr style="height: 85%">
 			<td width="15%">
 				<div class="sidebar" id="div_sidebar">
-				 	<a class="active" href="#home">Home</a>
-					<a href="#news">News</a>
-					<a href="#contact">Contact</a>
-					<a href="#about">About</a>
+
 				</div>
 			</td>
 			<td width="85%">
-				<div id="div_content" class="content">Content
-				Content
+				<div id="div_content" class="content">
 				</div>
 			</td>
 		</tr>
