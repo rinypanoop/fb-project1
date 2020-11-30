@@ -3,6 +3,17 @@
 
 <html>
 <head>
+
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-RJB1R5D39E"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-RJB1R5D39E');
+</script>
+
 <title>FB-AI Companion</title>
 <meta charset="UTF-8">
 
