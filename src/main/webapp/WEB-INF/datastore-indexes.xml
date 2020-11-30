@@ -1,8 +1,8 @@
-<!-- Indices written at Sat, 28 Nov 2020 01:10:41 PST -->
+<!-- Indices written at Sun, 29 Nov 2020 16:30:49 PST -->
 
 <datastore-indexes autoGenerate="true">
 
-    <!-- Used 3 times in query history -->
+    <!-- Used 1 time in query history -->
     <datastore-index kind="User" ancestor="false" source="auto">
         <property name="user_id" direction="asc"/>
         <property name="fb_post_date" direction="asc"/>

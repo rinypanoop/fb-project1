@@ -86,20 +86,20 @@ html, body {
 		</tr>
 		<tr style="height: 20%">
 			<td align="center">
-				<div id="">FB AI Companion</div>
+				<div id=""><p style="font-weight: bold;font-size: 50px; color: #1fa694"> FB AI Companion</p></div>
 			</td>
 		</tr>
-		<tr style="height: 50%">
+		<tr style="height: 30%">
 
 			<td align="center"><fb:login-button scope="user_photos"
-					onlogin="checkLoginState();">Login with Facebook</fb:login-button>
+					onlogin="checkLoginState();" size="xlarge">Login with Facebook</fb:login-button>
 			</td>
 
 		</tr>
 
 		<tr style="height: 20%">
-			<td align="center">
-				<div id="">Run analytics on your FB Photos</div>
+			<td align="center" >
+				<div id=""><p style="font-size: 30Px; color: #f27c05;"> Run analytics on your FB Photos </p></div>
 			</td>
 		</tr>
 		<tr style="height: 5%">

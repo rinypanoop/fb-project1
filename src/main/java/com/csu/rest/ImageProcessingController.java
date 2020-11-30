@@ -93,23 +93,25 @@ public class ImageProcessingController {
 
 	private void getImagesFromFbAndStoreinDataStore(String access_token, DatastoreService datastore, String user_id) {
 		try {
-			int limit = 1; //TODO increase the limit 
+			int limit = 5; //TODO increase the limit 
 			String baseUrl = "https://graph.facebook.com/v9.0/me/albums";
-			String parameters = "?fields=photos%7Bcreated_time%2Cid%2Cpicture%7D%2Cname&limit="+limit+"&access_token=";
+			String parameters = "?fields=photos%7Bcreated_time%2Cid%2Cpicture%7D%2Cname&access_token=";
 
 			String url = baseUrl + parameters + access_token;
 
 			// This is to work with FB paging
 			int count = 0;
-			while(StringUtils.isNotBlank(url) && count <= 3) {
-				count++;
+			while(StringUtils.isNotBlank(url) && count <= 5) {
 				FbAlbums albums = getPhotosFromFb(url);
 				if(null != albums && !albums.getData().isEmpty()) {
+					count++;
 					albums.getData().forEach(album -> {
 						if(null !=  album.getPhotos() && null != album.getPhotos().getData() && !album.getPhotos().getData().isEmpty()) {
 							album.getPhotos().getData().forEach( photo -> {
 
 								//TODO Check if the image is already present in the data store and process google vision if not present.
+								
+								System.out.println(photo.getPicture());
 
 								Entity user = checkIfPresent(datastore, photo.getId());
 								if(null == user) {
@@ -217,7 +219,7 @@ public class ImageProcessingController {
 	//Saving to data store.
 	private Entity saveToDataStore(List<EntityAnnotation> imageLabels, Datum_ photo, DatastoreService datastore, String user_id) {
 
-		List<String> lables = imageLabels.stream().filter(label -> label.getScore() * 100 > 95)
+		List<String> lables = imageLabels.stream().filter(label -> label.getScore() * 100 > 98)
 				.map(EntityAnnotation::getDescription).collect(Collectors.toList());
 
 		if(null != lables && !lables.isEmpty()) {

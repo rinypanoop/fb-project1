@@ -11,6 +11,7 @@
 	rel="stylesheet">
 <script src="https://code.jquery.com/jquery-1.10.2.js"></script>
 <script src="https://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>
+<script src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
 
 
@@ -62,6 +63,27 @@ html, body {
   color: white;
 }
 
+.loader {
+  border: 16px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 16px solid #3498db;
+  width: 30px;
+  height: 30px;
+  -webkit-animation: spin 2s linear infinite; /* Safari */
+  animation: spin 2s linear infinite;
+}
+
+/* Safari */
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 </style>
 
 
@@ -78,6 +100,11 @@ html, body {
 	});
 	
 	function getImages(){
+		
+		clearData();
+		
+		document.getElementById("loader").style.display = "block";
+		
 		$.ajax({
 			  url: "/images",
 			  type: "get", //send it through get method
@@ -92,9 +119,21 @@ html, body {
 			    drawImages(response);
 			  },
 			  error: function(xhr) {
+				  document.getElementById("loader").style.display="none";
 			    //Do Something to handle error
 			  }
 			});
+	}
+	
+	function clearData(){
+		var content_div = document.getElementById("div_content");
+		while (content_div.firstChild) {
+			content_div.removeChild(content_div.lastChild);
+		  }
+		var sidebar_div = document.getElementById("div_sidebar");
+		while (sidebar_div.firstChild) {
+			sidebar_div.removeChild(sidebar_div.lastChild);
+		  }
 	}
 	
 	
@@ -104,6 +143,9 @@ html, body {
 		var content_div = document.getElementById("div_content");
 		var sidebar_div = document.getElementById("div_sidebar");
 		
+		content_div.appendChild(document.createElement("br"));
+		content_div.appendChild(document.createElement("br"));
+		 
 		var isFirst=true;
 		response.imageDataResponse.lables.forEach(label => {
 		
@@ -117,6 +159,7 @@ html, body {
 		label_a.addEventListener("click", function(event) {
 			var current_display_id = event.target.text;
 			document.getElementById(current_display_id).style.display="block";
+			//twttr.widgets.load();
 			currentLabelDisplay.style.display="none";
 			currentLabelDisplay = document.getElementById(current_display_id);
 			
@@ -140,6 +183,8 @@ html, body {
 		}
 		
 		 content_div.appendChild(label_div);
+		 
+		 
 		 sidebar_div.appendChild(label_a);
 		 isFirst=false;
 		 
@@ -152,11 +197,20 @@ html, body {
 	      obj.labels.forEach(label => {
 	    	  var label_div = document.getElementById(label);
 	    	  label_div.appendChild(createImageElement(obj.url));
+	    	  var p_space = document.createElement("p");
+	    	  p_space.text="&#32";
+	    	  label_div.appendChild(p_space);
+	    	  label_div.appendChild(createTwitterButton(obj.url));
+	    	  label_div.appendChild(document.createElement("br"));
+	    	  label_div.appendChild(document.createElement("br"));
+	    	  label_div.appendChild(document.createElement("br"));
 	    	  label_div.appendChild(document.createElement("br"));
 	      })
 	       
 	    });
 		
+		//twttr.widgets.load();
+		document.getElementById("loader").style.display="none";
 	}
 	
 	function changeDisplay(){
@@ -166,22 +220,23 @@ html, body {
 	function createImageElement(image_url){
 		var img = document.createElement("img");
 		img.setAttribute("src", image_url);
+		img.style.height="175px";
+		img.style.width="200px";
 		return img;
 	}
 	
-	function test(){
-		
-		var para = document.createElement("p");
-		var node = document.createTextNode("Tutorix is the best e-learning platform");
-		para.appendChild(node);
-		
-		
-		img.setAttribute("src", "https://scontent-sjc3-1.xx.fbcdn.net/v/t1.0-0/p130x130/127153288_129374702305580_3499307895933272858_n.jpg?_nc_cat=111&ccb=2&_nc_sid=0be424&_nc_ohc=_L80X1TVZacAX_j3qpD&_nc_ht=scontent-sjc3-1.xx&tp=6&oh=302ff57bd73d0a956b556f2e2095f118&oe=5FE59217");
-		
-		//https://scontent-sjc3-1.xx.fbcdn.net/v/t1.0-0/p130x130/127153288_129374702305580_3499307895933272858_n.jpg?_nc_cat=111&ccb=2&_nc_sid=0be424&_nc_ohc=_L80X1TVZacAX_j3qpD&_nc_ht=scontent-sjc3-1.xx&tp=6&oh=302ff57bd73d0a956b556f2e2095f118&oe=5FE59217
-		
-		  document.getElementById("div_content").appendChild(img);
+	function createTwitterButton(image_url){
+		var url = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(image_url);
+		var tweet_a = document.createElement("a");
+		tweet_a.setAttribute("href",url);
+		tweet_a.setAttribute("class","twitter-share-button");
+		tweet_a.setAttribute("data-lang","en");
+		tweet_a.setAttribute("data-show-count","false");	
+		tweet_a.text="tweet";
+		return tweet_a;
 	}
+	
+
 	
 	
 </script>
@@ -210,12 +265,11 @@ html, body {
 											</p>
 										</td>
 										<td><input type="button" value="search" id="search" onclick="getImages()">
-										<input type="button" value="test" id="search" onclick="test()">
 										</td>
 									</tr>
 								</table>
 							</td>
-							<td width="45%" align="center">FB-AI Companion</td>
+							<td width="45%" align="center"><p style="font-weight: bold;font-size: 25px; color: #1fa694">FB-AI Companion</p></td>
 							<td width="20%" align="right"><%=request.getAttribute("user_name")%></td>
 						</tr>
 					</table>
@@ -228,7 +282,8 @@ html, body {
 
 				</div>
 			</td>
-			<td width="85%">
+			<td width="85%" align="center">
+				<div class="loader" id="loader" style="display:none"></div>
 				<div id="div_content" class="content">
 				</div>
 			</td>
