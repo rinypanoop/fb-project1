@@ -77,7 +77,7 @@ public class ImageProcessingController {
 	}
 
 	@GetMapping(value = "/images")
-	public String getAllEmployees(Model model, @RequestParam String fromDate, @RequestParam String toDate, @RequestParam String access_token, String user_id){
+	public String getAllImages(Model model, @RequestParam String fromDate, @RequestParam String toDate, @RequestParam String access_token, String user_id){
 
 		//Get Images from FB, run vision and store in data store.
 		DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
@@ -102,7 +102,9 @@ public class ImageProcessingController {
 			// This is to work with FB paging
 			int count = 0;
 			while(StringUtils.isNotBlank(url) && count <= 5) {
+				
 				FbAlbums albums = getPhotosFromFb(url);
+				
 				if(null != albums && !albums.getData().isEmpty()) {
 					count++;
 					albums.getData().forEach(album -> {
@@ -153,8 +155,7 @@ public class ImageProcessingController {
 
 	//Query data store to check if the image is already present.
 	private ImageDataResponse getImagesFromStore(DatastoreService datastore, String fromDate, String toDate, String user_id ) {
-		List<String> imageList = new ArrayList<String>();
-		imageList.add("Flower");
+
 
 		Query query =
 				new Query("User");
@@ -170,9 +171,9 @@ public class ImageProcessingController {
 			
 			Filter userFilter = new FilterPredicate("user_id", FilterOperator.EQUAL, user_id);
 
-			Filter dateFilter = CompositeFilterOperator.and(fromFilter, toFIlter, userFilter);
+			Filter filter = CompositeFilterOperator.and(fromFilter, toFIlter, userFilter);
 
-			query.setFilter(dateFilter);
+			query.setFilter(filter);
 
 		} catch (ParseException e) {
 			e.printStackTrace();
@@ -252,7 +253,9 @@ public class ImageProcessingController {
 
 	private List<EntityAnnotation> getImageLabels(String imageUrl) {
 		try {
-			byte[]  imgBytes = downloadFile(new URL(imageUrl));
+			
+			byte[]  imgBytes = downloadFile(new URL(imageUrl));  //Download photo from FB
+			
 			ByteString byteString = ByteString.copyFrom(imgBytes);
 			Image image = Image.newBuilder().setContent(byteString).build();
 
