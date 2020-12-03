@@ -7,6 +7,7 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -123,7 +124,7 @@ public class ImageProcessingController {
 								if(null == user) {
 									//Process and fetch image lables using google vision analytics.
 									List<EntityAnnotation> imageLabels = getImageLabels(photo.getPicture());
-
+									System.out.println(null != imageLabels);
 									//Save the imageId, image URL and lables to data store
 									if(null != imageLabels) {
 										user = saveToDataStore(imageLabels, photo, datastore, user_id);
@@ -162,13 +163,21 @@ public class ImageProcessingController {
 
 
 		Query query =
+
 				new Query("User");
 
-		DateFormat originalFormat = new SimpleDateFormat("MM/dd/yyyy", Locale.ENGLISH);
+		DateFormat originalFormat = new SimpleDateFormat("MM/dd/yyyy");
 		try {
+			
+			Calendar c = Calendar.getInstance();
+			
 			Date search_from_date = originalFormat.parse(fromDate);
-			Date search_to_date = originalFormat.parse(toDate);
+			
 
+			c.setTime(originalFormat.parse(toDate)); c.add(Calendar.DAY_OF_MONTH, 1);  
+			
+			Date search_to_date = originalFormat.parse(originalFormat.format(c.getTime())); 
+			
 			Filter fromFilter = new FilterPredicate("fb_post_date", FilterOperator.GREATER_THAN_OR_EQUAL, search_from_date);
 
 			Filter toFIlter = new FilterPredicate("fb_post_date", FilterOperator.LESS_THAN_OR_EQUAL, search_to_date);
@@ -224,9 +233,13 @@ public class ImageProcessingController {
 	//Saving to data store.
 	private Entity saveToDataStore(List<EntityAnnotation> imageLabels, Datum_ photo, DatastoreService datastore, String user_id) {
 
-		List<String> lables = imageLabels.stream().filter(label -> label.getScore() * 100 > 98)
+		System.out.println("image labels:"+imageLabels);
+		
+		List<String> lables = imageLabels.stream().filter(label -> label.getScore() * 100 >= 97.5)
 				.map(EntityAnnotation::getDescription).collect(Collectors.toList());
 
+		
+		
 		if(null != lables && !lables.isEmpty()) {
 
 			Entity user = new Entity("User");
