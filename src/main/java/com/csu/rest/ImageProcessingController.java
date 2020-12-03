@@ -33,6 +33,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.csu.rest.analytics.GoogleAnalytics;
 import com.csu.rest.model.Datum_;
 import com.csu.rest.model.FbAlbums;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,13 +64,14 @@ public class ImageProcessingController {
 
 	@GetMapping("/")
 	public String index(Model model) {
+		GoogleAnalytics.publishAnalytics("Login","Login");
 		return "index";
 	}
 
 	@PostMapping("/home")
 	public String home(Model model, HttpServletRequest request, HttpServletResponse response) {
 		System.out.println(request.getParameter("access_token"));
-
+		GoogleAnalytics.publishAnalytics("Login","Login Success");
 		model.addAttribute("access_token", request.getParameter("access_token"));
 		model.addAttribute("user_name", request.getParameter("user_name"));
 		model.addAttribute("user_id", request.getParameter("user_id"));
@@ -79,6 +81,8 @@ public class ImageProcessingController {
 	@GetMapping(value = "/images")
 	public String getAllImages(Model model, @RequestParam String fromDate, @RequestParam String toDate, @RequestParam String access_token, String user_id){
 
+		GoogleAnalytics.publishAnalytics("search","Search images");
+		
 		//Get Images from FB, run vision and store in data store.
 		DatastoreService datastore = DatastoreServiceFactory.getDatastoreService();
 		getImagesFromFbAndStoreinDataStore(access_token, datastore, user_id);
